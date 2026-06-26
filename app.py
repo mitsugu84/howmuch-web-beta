@@ -161,48 +161,29 @@ JSON形式:
     raw_text = response.output_text
     data = extract_json(raw_text)
     return normalize_result(data)
-
-
-@app.route("/", methods=["GET"])
-def index():
-    return render_template("index.html", results=None, errors=None, max_images=MAX_IMAGES)
-
-
 @app.route("/analyze", methods=["POST"])
 def analyze():
     file = request.files.get("images")
 
-if not file or not file.filename:
-    errors.append("画像を選択してください。")
-    return render_template(
-        "index.html",
-        results=None,
-        errors=errors,
-        max_images=1
-    )
-
     errors = []
     results = []
 
-    if not files:
-        errors.append("画像を1枚以上選択してください。")
-        return render_template("index.html", results=None, errors=errors, max_images=MAX_IMAGES)
+    if not file or not file.filename:
+        errors.append("画像を1枚選択してください。")
+        return render_template("index.html", results=None, errors=errors, max_images=1)
 
-    if len(files) > MAX_IMAGES:
-        errors.append(f"一度に解析できる画像は最大{MAX_IMAGES}枚です。先頭{MAX_IMAGES}枚だけ解析します。")
-        files = files[:MAX_IMAGES]
+    try:
+        data_url = image_to_data_url(file)
+        result = analyze_one_image(data_url)
+        result["index"] = 1
+        result["filename"] = file.filename
+        results.append(result)
+    except Exception as e:
+        errors.append(f"{file.filename}：解析に失敗しました。{e}")
 
-            try:
-            data_url = image_to_data_url(file)
-            result = analyze_one_image(data_url)
-            result["index"] = idx
-            result["filename"] = file.filename
-            results.append(result)
-        except Exception as e:
-            errors.append(f"{file.filename or idx}：解析に失敗しました。{e}")
-
-    return render_template("index.html", results=results, errors=errors, max_images=MAX_IMAGES)
+    return render_template("index.html", results=results, errors=errors, max_images=1)
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
+
