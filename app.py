@@ -28,7 +28,7 @@ def image_to_data_url(file_storage):
         img = img.convert("RGB")
         img.thumbnail((1400, 1400))
     except UnidentifiedImageError:
-        raise ValueError("画像ファイルとして読み込めませんでした。JPG/PNG/HEIC変換済み画像を使ってください。")
+        raise ValueError("画像ファイルとして読み込めませんでした。JPG/PNG画像を使ってください。")
 
     buf = BytesIO()
     img.save(buf, format="JPEG", quality=85, optimize=True)
@@ -54,21 +54,47 @@ def extract_json(text):
         return json.loads(match.group(0))
 
 
-def safe_int(value, default=0):
-    try:
-        if isinstance(value, str):
-            value = re.sub(r"[^0-9]", "", value)
-        return int(value)
-    except Exception:
-        return default
-
-
 def build_links(keyword):
     q = quote_plus(keyword or "")
     return {
         "mercari": f"https://jp.mercari.com/search?keyword={q}",
         "yahoo_auction": f"https://auctions.yahoo.co.jp/search/search?p={q}",
         "jimoty": f"https://jmty.jp/all/sale-kw-{q}",
+    }
+
+
+def normalize_result(data):
+    """Make sure all keys exist so template won't break."""
+    item_name = data.get("item_name") or "不明な商品"
+    keyword = data.get("search_keywords") or item_name
+
+    return {
+        "item_name": item_name,
+        "condition_guess": data.get("condition_guess") or "不明",
+        "confidence": data.get("confidence") or "不明",
+        "mercari": data.get("mercari") or {
+            "price_range": "不明",
+            "listing_hint": "不明",
+            "comment": "情報を取得できませんでした。",
+        },
+        "yahoo_auction": data.get("yahoo_auction") or {
+            "price_range": "不明",
+            "listing_hint": "不明",
+            "comment": "情報を取得できませんでした。",
+        },
+        "jimoty": data.get("jimoty") or {
+            "price_range": "不明",
+            "listing_hint": "不明",
+            "comment": "情報を取得できませんでした。",
+        },
+        "shop_buyback": data.get("shop_buyback") or {
+            "price_range": "不明",
+            "comment": "情報を取得できませんでした。",
+        },
+        "recommendation": data.get("recommendation") or "各サイトの実際の出品状況を確認して判断してください。",
+        "search_keywords": keyword,
+        "caution": data.get("caution") or "価格はAI調査による参考価格です。実際の価格は状態・付属品・時期によって変わります。",
+        "links": build_links(keyword),
     }
 
 
@@ -84,38 +110,34 @@ def analyze_one_image(data_url):
 - 価格は必ず「参考価格」として出す
 - 不確実な場合は不確実と書く
 - 画像だけで分からない付属品・動作状態は断定しない
-- メルカリ手数料は10%で概算する
-- 送料は商品の大きさから概算する
 - ジャンク/箱なし/本体のみ/付属品ありの可能性を分かる範囲で推定する
+- 送料・手数料・想定利益は出さない
 - 返答は必ずJSONだけ。説明文やMarkdownは禁止。
 
 JSON形式:
 {
   "item_name": "商品名",
   "condition_guess": "状態推定",
-  "confidence": "高/中/低",
+  "confidence": "高/中/低/不明",
   "mercari": {
     "price_range": "〇〇〜〇〇円",
     "listing_hint": "出品数や傾向。分からない場合は不明",
-    "comment": "コメント"
+    "comment": "メルカリでの傾向コメント"
   },
   "yahoo_auction": {
     "price_range": "〇〇〜〇〇円",
     "listing_hint": "出品数や傾向。分からない場合は不明",
-    "comment": "コメント"
+    "comment": "ヤフオクでの傾向コメント"
   },
   "jimoty": {
     "price_range": "〇〇〜〇〇円",
     "listing_hint": "出品数や傾向。分からない場合は不明",
-    "comment": "コメント"
+    "comment": "ジモティでの傾向コメント"
   },
   "shop_buyback": {
     "price_range": "〇〇〜〇〇円",
     "comment": "店頭買取の参考予想"
   },
-  "shipping_estimate": 850,
-  "fee_estimate": 2200,
-  "expected_profit": 18950,
   "recommendation": "おすすめの売り方",
   "search_keywords": "検索キーワード",
   "caution": "注意点"
@@ -138,12 +160,7 @@ JSON形式:
 
     raw_text = response.output_text
     data = extract_json(raw_text)
-    keyword = data.get("search_keywords") or data.get("item_name") or ""
-    data["links"] = build_links(keyword)
-    data["shipping_estimate"] = safe_int(data.get("shipping_estimate"), 0)
-    data["fee_estimate"] = safe_int(data.get("fee_estimate"), 0)
-    data["expected_profit"] = safe_int(data.get("expected_profit"), 0)
-    return data
+    return normalize_result(data)
 
 
 @app.route("/", methods=["GET"])
