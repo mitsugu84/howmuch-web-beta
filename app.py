@@ -192,8 +192,7 @@ if not file or not file.filename:
         errors.append(f"一度に解析できる画像は最大{MAX_IMAGES}枚です。先頭{MAX_IMAGES}枚だけ解析します。")
         files = files[:MAX_IMAGES]
 
-    for idx, file in enumerate(files, start=1):
-        try:
+            try:
             data_url = image_to_data_url(file)
             result = analyze_one_image(data_url)
             result["index"] = idx
