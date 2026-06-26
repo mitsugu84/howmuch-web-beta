@@ -13,16 +13,14 @@ from PIL import Image, UnidentifiedImageError
 load_dotenv()
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024  # 25MB
+app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-MAX_IMAGES = int(os.getenv("MAX_IMAGES", "10"))
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
 
 
 def image_to_data_url(file_storage):
-    """Convert uploaded image to compressed JPEG data URL."""
     try:
         img = Image.open(file_storage.stream)
         img = img.convert("RGB")
@@ -37,7 +35,6 @@ def image_to_data_url(file_storage):
 
 
 def extract_json(text):
-    """Extract JSON object from model output."""
     if not text:
         raise ValueError("AIの返答が空でした。")
 
@@ -64,7 +61,6 @@ def build_links(keyword):
 
 
 def normalize_result(data):
-    """Make sure all keys exist so template won't break."""
     item_name = data.get("item_name") or "不明な商品"
     keyword = data.get("search_keywords") or item_name
 
@@ -91,9 +87,11 @@ def normalize_result(data):
             "price_range": "不明",
             "comment": "情報を取得できませんでした。",
         },
-        "recommendation": data.get("recommendation") or "各サイトの実際の出品状況を確認して判断してください。",
+        "recommendation": data.get("recommendation")
+        or "各サイトの実際の出品状況を確認して判断してください。",
         "search_keywords": keyword,
-        "caution": data.get("caution") or "価格はAI調査による参考価格です。実際の価格は状態・付属品・時期によって変わります。",
+        "caution": data.get("caution")
+        or "価格はAI調査による参考価格です。実際の価格は状態・付属品・時期によって変わります。",
         "links": build_links(keyword),
     }
 
@@ -161,6 +159,13 @@ JSON形式:
     raw_text = response.output_text
     data = extract_json(raw_text)
     return normalize_result(data)
+
+
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html", results=None, errors=None, max_images=1)
+
+
 @app.route("/analyze", methods=["POST"])
 def analyze():
     file = request.files.get("images")
@@ -186,4 +191,3 @@ def analyze():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
-
