@@ -11,12 +11,12 @@
     <section class="hero">
       <div class="badge">β版</div>
       <h1>ハウマッチ君</h1>
-      <p>写真1枚で、今の価値をAIが調査。捨てる前に、ハウマッチ？</p>
+      <p>捨てる前に、ちょっとハウマッチ？ 写真1枚でAIが相場を調査します。</p>
     </section>
 
     <section class="card">
       <h2>写真を追加</h2>
-      <p class="sub">まとめる君方式で、複数枚を選んでまとめて解析できます。最大{{ max_images }}枚。</p>
+      <p class="sub">商品を1つ撮影してください。AIが現在の相場を1回だけ調査します。</p>
 
       {% if errors %}
         <div class="errors">
@@ -34,7 +34,7 @@
 
         <div id="previewArea" class="preview-area"></div>
 
-        <button type="submit" class="main-btn" id="submitBtn">査定開始</button>
+        <button type="submit" class="main-btn" id="submitBtn">💰 ハウマッチ！</button>
       </form>
 
       <p class="note">※ AIが公開情報を1回限りで調査・要約します。価格は参考価格です。最終確認は各公式サイトでお願いします。</p>
@@ -47,7 +47,7 @@
         {% for r in results %}
           <article class="result-card">
             <div class="result-head">
-              <p class="file-name">{{ r.index }}枚目：{{ r.filename }}</p>
+              <p class="file-name">{{ r.filename }}</p>
               <h3>{{ r.item_name }}</h3>
               <div class="chips">
                 <span>精度：{{ r.confidence }}</span>
@@ -98,6 +98,10 @@
             </div>
           </article>
         {% endfor %}
+
+        <div class="again-wrap">
+          <a href="/" class="again-btn">🔄 別の商品を査定する</a>
+        </div>
       </section>
     {% endif %}
   </main>
@@ -108,29 +112,26 @@
     const submitBtn = document.getElementById("submitBtn");
     const form = document.getElementById("uploadForm");
 
-   input.addEventListener("change", () => {
+    input.addEventListener("change", () => {
+      previewArea.innerHTML = "";
 
-    previewArea.innerHTML = "";
+      const file = input.files[0];
+      if (!file) return;
 
-    const file = input.files[0];
+      const item = document.createElement("div");
+      item.className = "preview-item";
 
-    if (!file) return;
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(file);
 
-    const item = document.createElement("div");
-    item.className = "preview-item";
+      const name = document.createElement("p");
+      name.textContent = file.name;
 
-    const img = document.createElement("img");
-    img.src = URL.createObjectURL(file);
+      item.appendChild(img);
+      item.appendChild(name);
+      previewArea.appendChild(item);
+    });
 
-    const name = document.createElement("p");
-    name.textContent = file.name;
-
-    item.appendChild(img);
-    item.appendChild(name);
-
-    previewArea.appendChild(item);
-
-});
     form.addEventListener("submit", () => {
       submitBtn.disabled = true;
       submitBtn.textContent = "AI査定中...";
@@ -138,8 +139,3 @@
   </script>
 </body>
 </html>
-<div class="again-wrap">
-    <a href="/" class="again-btn">
-        🔄 別の商品を査定する
-    </a>
-</div>
