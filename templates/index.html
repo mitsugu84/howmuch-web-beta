@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ハウマッチ君 β版</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <div class="badge">β版</div>
+      <h1>ハウマッチ君</h1>
+      <p>写真1枚で、今の価値をAIが調査。捨てる前に、ハウマッチ？</p>
+    </section>
+
+    <section class="card">
+      <h2>写真を追加</h2>
+      <p class="muted">まとめる君方式で、複数枚を選んでまとめて解析できます。最大{{ max_images }}枚。</p>
+      <form action="/analyze" method="post" enctype="multipart/form-data" id="uploadForm">
+        <label class="upload-box">
+          <input type="file" name="images" id="images" accept="image/*" multiple required>
+          <span>📷 写真を選ぶ / 撮る</span>
+        </label>
+        <div id="fileList" class="file-list"></div>
+        <button type="submit" class="primary" id="submitBtn">査定開始</button>
+      </form>
+      <p class="note">※ AIが公開情報を1回限りで調査・要約します。価格は参考価格です。最終確認は各公式サイトでお願いします。</p>
+    </section>
+
+    {% if errors %}
+      <section class="error-box">
+        <h2>注意</h2>
+        {% for error in errors %}
+          <p>{{ error }}</p>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    {% if results %}
+      <section class="results">
+        <h2>査定結果</h2>
+        {% for r in results %}
+          <article class="result-card">
+            <div class="result-head">
+              <div>
+                <p class="muted">{{ r.index }}枚目：{{ r.filename }}</p>
+                <h3>{{ r.item_name }}</h3>
+              </div>
+              <span class="confidence">精度：{{ r.confidence }}</span>
+            </div>
+
+            <div class="summary-grid">
+              <div>
+                <span>状態推定</span>
+                <strong>{{ r.condition_guess }}</strong>
+              </div>
+              <div>
+                <span>送料目安</span>
+                <strong>{{ "{:,}".format(r.shipping_estimate) }}円</strong>
+              </div>
+              <div>
+                <span>手数料目安</span>
+                <strong>{{ "{:,}".format(r.fee_estimate) }}円</strong>
+              </div>
+              <div>
+                <span>想定利益</span>
+                <strong>{{ "{:,}".format(r.expected_profit) }}円</strong>
+              </div>
+            </div>
+
+            <div class="market-table">
+              <div class="market-row header">
+                <span>サービス</span><span>価格帯</span><span>傾向</span>
+              </div>
+              <div class="market-row">
+                <span>メルカリ</span><strong>{{ r.mercari.price_range }}</strong><span>{{ r.mercari.listing_hint }}</span>
+              </div>
+              <p class="comment">{{ r.mercari.comment }}</p>
+              <div class="market-row">
+                <span>ヤフオク</span><strong>{{ r.yahoo_auction.price_range }}</strong><span>{{ r.yahoo_auction.listing_hint }}</span>
+              </div>
+              <p class="comment">{{ r.yahoo_auction.comment }}</p>
+              <div class="market-row">
+                <span>ジモティ</span><strong>{{ r.jimoty.price_range }}</strong><span>{{ r.jimoty.listing_hint }}</span>
+              </div>
+              <p class="comment">{{ r.jimoty.comment }}</p>
+              <div class="market-row">
+                <span>店頭買取</span><strong>{{ r.shop_buyback.price_range }}</strong><span>{{ r.shop_buyback.comment }}</span>
+              </div>
+            </div>
+
+            <div class="recommendation">
+              <h4>おすすめ</h4>
+              <p>{{ r.recommendation }}</p>
+              <h4>注意点</h4>
+              <p>{{ r.caution }}</p>
+            </div>
+
+            <div class="links">
+              <a href="{{ r.links.mercari }}" target="_blank" rel="noopener">メルカリで確認</a>
+              <a href="{{ r.links.yahoo_auction }}" target="_blank" rel="noopener">ヤフオクで確認</a>
+              <a href="{{ r.links.jimoty }}" target="_blank" rel="noopener">ジモティで確認</a>
+            </div>
+          </article>
+        {% endfor %}
+      </section>
+    {% endif %}
+  </main>
+
+  <script>
+    const images = document.getElementById('images');
+    const fileList = document.getElementById('fileList');
+    const form = document.getElementById('uploadForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    images?.addEventListener('change', () => {
+      fileList.innerHTML = '';
+      [...images.files].forEach((file, i) => {
+        const div = document.createElement('div');
+        div.className = 'file-item';
+        div.textContent = `${i + 1}. ${file.name}`;
+        fileList.appendChild(div);
+      });
+    });
+
+    form?.addEventListener('submit', () => {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'AI査定中...';
+    });
+  </script>
+</body>
+</html>
