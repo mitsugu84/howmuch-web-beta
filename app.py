@@ -170,8 +170,16 @@ def index():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    files = request.files.getlist("images")
-    files = [f for f in files if f and f.filename]
+    file = request.files.get("images")
+
+if not file or not file.filename:
+    errors.append("画像を選択してください。")
+    return render_template(
+        "index.html",
+        results=None,
+        errors=errors,
+        max_images=1
+    )
 
     errors = []
     results = []
