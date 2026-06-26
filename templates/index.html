@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <main class="container">
+  <main class="wrap">
     <section class="hero">
       <div class="badge">β版</div>
       <h1>ハウマッチ君</h1>
@@ -16,91 +16,85 @@
 
     <section class="card">
       <h2>写真を追加</h2>
-      <p class="muted">まとめる君方式で、複数枚を選んでまとめて解析できます。最大{{ max_images }}枚。</p>
+      <p class="sub">まとめる君方式で、複数枚を選んでまとめて解析できます。最大{{ max_images }}枚。</p>
+
+      {% if errors %}
+        <div class="errors">
+          {% for error in errors %}
+            <p>⚠️ {{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
       <form action="/analyze" method="post" enctype="multipart/form-data" id="uploadForm">
         <label class="upload-box">
-          <input type="file" name="images" id="images" accept="image/*" multiple required>
+          <input type="file" name="images" id="imageInput" accept="image/*" multiple>
           <span>📷 写真を選ぶ / 撮る</span>
         </label>
-        <div id="fileList" class="file-list"></div>
-        <button type="submit" class="primary" id="submitBtn">査定開始</button>
+
+        <div id="previewArea" class="preview-area"></div>
+
+        <button type="submit" class="main-btn" id="submitBtn">査定開始</button>
       </form>
+
       <p class="note">※ AIが公開情報を1回限りで調査・要約します。価格は参考価格です。最終確認は各公式サイトでお願いします。</p>
     </section>
-
-    {% if errors %}
-      <section class="error-box">
-        <h2>注意</h2>
-        {% for error in errors %}
-          <p>{{ error }}</p>
-        {% endfor %}
-      </section>
-    {% endif %}
 
     {% if results %}
       <section class="results">
         <h2>査定結果</h2>
+
         {% for r in results %}
           <article class="result-card">
             <div class="result-head">
-              <div>
-                <p class="muted">{{ r.index }}枚目：{{ r.filename }}</p>
-                <h3>{{ r.item_name }}</h3>
-              </div>
-              <span class="confidence">精度：{{ r.confidence }}</span>
-            </div>
-
-            <div class="summary-grid">
-              <div>
-                <span>状態推定</span>
-                <strong>{{ r.condition_guess }}</strong>
-              </div>
-              <div>
-                <span>送料目安</span>
-                <strong>{{ "{:,}".format(r.shipping_estimate) }}円</strong>
-              </div>
-              <div>
-                <span>手数料目安</span>
-                <strong>{{ "{:,}".format(r.fee_estimate) }}円</strong>
-              </div>
-              <div>
-                <span>想定利益</span>
-                <strong>{{ "{:,}".format(r.expected_profit) }}円</strong>
+              <p class="file-name">{{ r.index }}枚目：{{ r.filename }}</p>
+              <h3>{{ r.item_name }}</h3>
+              <div class="chips">
+                <span>精度：{{ r.confidence }}</span>
+                <span>状態：{{ r.condition_guess }}</span>
               </div>
             </div>
 
-            <div class="market-table">
-              <div class="market-row header">
-                <span>サービス</span><span>価格帯</span><span>傾向</span>
+            <div class="market-list">
+              <div class="market-card mercari">
+                <div class="market-title">メルカリ</div>
+                <div class="price">{{ r.mercari.price_range }}</div>
+                <p class="hint">{{ r.mercari.listing_hint }}</p>
+                <p>{{ r.mercari.comment }}</p>
+                <a href="{{ r.links.mercari }}" target="_blank" rel="noopener">メルカリで確認</a>
               </div>
-              <div class="market-row">
-                <span>メルカリ</span><strong>{{ r.mercari.price_range }}</strong><span>{{ r.mercari.listing_hint }}</span>
+
+              <div class="market-card yahoo">
+                <div class="market-title">ヤフオク</div>
+                <div class="price">{{ r.yahoo_auction.price_range }}</div>
+                <p class="hint">{{ r.yahoo_auction.listing_hint }}</p>
+                <p>{{ r.yahoo_auction.comment }}</p>
+                <a href="{{ r.links.yahoo_auction }}" target="_blank" rel="noopener">ヤフオクで確認</a>
               </div>
-              <p class="comment">{{ r.mercari.comment }}</p>
-              <div class="market-row">
-                <span>ヤフオク</span><strong>{{ r.yahoo_auction.price_range }}</strong><span>{{ r.yahoo_auction.listing_hint }}</span>
+
+              <div class="market-card jimoty">
+                <div class="market-title">ジモティー</div>
+                <div class="price">{{ r.jimoty.price_range }}</div>
+                <p class="hint">{{ r.jimoty.listing_hint }}</p>
+                <p>{{ r.jimoty.comment }}</p>
+                <a href="{{ r.links.jimoty }}" target="_blank" rel="noopener">ジモティーで確認</a>
               </div>
-              <p class="comment">{{ r.yahoo_auction.comment }}</p>
-              <div class="market-row">
-                <span>ジモティ</span><strong>{{ r.jimoty.price_range }}</strong><span>{{ r.jimoty.listing_hint }}</span>
-              </div>
-              <p class="comment">{{ r.jimoty.comment }}</p>
-              <div class="market-row">
-                <span>店頭買取</span><strong>{{ r.shop_buyback.price_range }}</strong><span>{{ r.shop_buyback.comment }}</span>
+
+              <div class="market-card shop">
+                <div class="market-title">店頭買取目安</div>
+                <div class="price">{{ r.shop_buyback.price_range }}</div>
+                <p>{{ r.shop_buyback.comment }}</p>
               </div>
             </div>
 
-            <div class="recommendation">
+            <div class="comment-box">
               <h4>おすすめ</h4>
               <p>{{ r.recommendation }}</p>
-              <h4>注意点</h4>
-              <p>{{ r.caution }}</p>
             </div>
 
-            <div class="links">
-              <a href="{{ r.links.mercari }}" target="_blank" rel="noopener">メルカリで確認</a>
-              <a href="{{ r.links.yahoo_auction }}" target="_blank" rel="noopener">ヤフオクで確認</a>
-              <a href="{{ r.links.jimoty }}" target="_blank" rel="noopener">ジモティで確認</a>
+            <div class="caution-box">
+              <h4>注意点</h4>
+              <p>{{ r.caution }}</p>
             </div>
           </article>
         {% endfor %}
@@ -109,24 +103,34 @@
   </main>
 
   <script>
-    const images = document.getElementById('images');
-    const fileList = document.getElementById('fileList');
-    const form = document.getElementById('uploadForm');
-    const submitBtn = document.getElementById('submitBtn');
+    const input = document.getElementById("imageInput");
+    const previewArea = document.getElementById("previewArea");
+    const submitBtn = document.getElementById("submitBtn");
+    const form = document.getElementById("uploadForm");
 
-    images?.addEventListener('change', () => {
-      fileList.innerHTML = '';
-      [...images.files].forEach((file, i) => {
-        const div = document.createElement('div');
-        div.className = 'file-item';
-        div.textContent = `${i + 1}. ${file.name}`;
-        fileList.appendChild(div);
+    input.addEventListener("change", () => {
+      previewArea.innerHTML = "";
+      const files = Array.from(input.files);
+
+      files.forEach((file, index) => {
+        const item = document.createElement("div");
+        item.className = "preview-item";
+
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+
+        const name = document.createElement("p");
+        name.textContent = `${index + 1}枚目：${file.name}`;
+
+        item.appendChild(img);
+        item.appendChild(name);
+        previewArea.appendChild(item);
       });
     });
 
-    form?.addEventListener('submit', () => {
+    form.addEventListener("submit", () => {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'AI査定中...';
+      submitBtn.textContent = "AI査定中...";
     });
   </script>
 </body>
