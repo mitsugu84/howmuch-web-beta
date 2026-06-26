@@ -108,26 +108,29 @@
     const submitBtn = document.getElementById("submitBtn");
     const form = document.getElementById("uploadForm");
 
-    input.addEventListener("change", () => {
-      previewArea.innerHTML = "";
-      const files = Array.from(input.files);
+   input.addEventListener("change", () => {
 
-      files.forEach((file, index) => {
-        const item = document.createElement("div");
-        item.className = "preview-item";
+    previewArea.innerHTML = "";
 
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(file);
+    const file = input.files[0];
 
-        const name = document.createElement("p");
-        name.textContent = `${index + 1}枚目：${file.name}`;
+    if (!file) return;
 
-        item.appendChild(img);
-        item.appendChild(name);
-        previewArea.appendChild(item);
-      });
-    });
+    const item = document.createElement("div");
+    item.className = "preview-item";
 
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+
+    const name = document.createElement("p");
+    name.textContent = file.name;
+
+    item.appendChild(img);
+    item.appendChild(name);
+
+    previewArea.appendChild(item);
+
+});
     form.addEventListener("submit", () => {
       submitBtn.disabled = true;
       submitBtn.textContent = "AI査定中...";
